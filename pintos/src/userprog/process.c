@@ -37,7 +37,7 @@ process_execute (const char *file_name)
   char *fn_copy;
   tid_t tid;
 
-  child_info = palloc_get_page(PAL_USER);
+  child_info = palloc_get_page(0);
   if (child_info == NULL){
     return TID_ERROR;
   }
@@ -83,7 +83,7 @@ start_process (void *f_name)
   int size = strlen(file_name) + 1;
   int argc=0; // It counts number of parsed argument
   char **argv; // It holds parsed argument
-  argv = palloc_get_page (PAL_USER);
+  argv = palloc_get_page (0);
   if (argv == NULL){
     *(thread_current()->process_load) = false;
     palloc_free_page (file_name);

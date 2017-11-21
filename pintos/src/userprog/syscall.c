@@ -63,7 +63,9 @@ syscall_handler (struct intr_frame *f UNUSED)
   //Check whether stack pointer exceed PHYS_BASE
   for(i = 0; i < 4; i++){ //Argument of syscall is no more than 3
     if( ( get_user((uint8_t *)syscall_nr + 4 * i ) == -1 )
-        || is_kernel_vaddr ((void *)((uint8_t *)syscall_nr + 4 * i)) ){
+        || is_kernel_vaddr ((void *)((uint8_t *)syscall_nr + 4 * i)) )
+    {
+      //printf("syscall exit get user\n");
       syscall_exit(EXIT_STATUS_1);
     }
   }
@@ -81,21 +83,21 @@ syscall_handler (struct intr_frame *f UNUSED)
       syscall_exit((int)*arg1);
       break;
     case SYS_EXEC: //2
-      is_valid_ptr(f, *(void **)arg1);
+      is_valid_page(f, *(void **)arg1, false);
       f->eax = (uint32_t) process_execute(*(char **)arg1);
       break;
     case SYS_WAIT: //3
       f->eax = (uint32_t) process_wait(*(tid_t *)arg1);
       break; 
     case SYS_CREATE: //4
-      is_valid_ptr(f, *(void **)arg1);
+      is_valid_page(f, *(void **)arg1, false);
       f->eax = (uint32_t) syscall_create(*(char **)arg1, (off_t)*arg2);
       break;
     case SYS_REMOVE: //5
       f->eax = (uint32_t) syscall_remove (*(char **)arg1);
       break;
     case SYS_OPEN: //6
-      is_valid_ptr(f, *(void **)arg1);
+      is_valid_page(f, *(void **)arg1, false);
       f->eax = (uint32_t) syscall_open(*(char **)arg1);
       break;
     case SYS_FILESIZE: //7
@@ -104,21 +106,33 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_READ: //8
 
       is_valid_buffer(f, *(void **)arg2, (unsigned)*arg3, true);
-      if((int)*arg1 == 0) syscall_exit(EXIT_STATUS_1);
+      
+      if((int)*arg1 == 0)
+      {
+        //printf("syscall exit here1\n");
+        syscall_exit(EXIT_STATUS_1);
+      }
 
       f->eax = (uint32_t) syscall_read((int)*arg1, *(void **)arg2, (unsigned)*arg3);
       break;
     case SYS_WRITE: //9
 
       is_valid_buffer(f, *(void **)arg2, (unsigned)*arg3, false);
-      if((int)*arg1 == 0) syscall_exit(EXIT_STATUS_1); //STDIN은 exit/ todo: valid ptr 안에 집어넣기
+      
+      if((int)*arg1 == 0)
+      {
+        //printf("syscall exit here2\n");
+        syscall_exit(EXIT_STATUS_1); //STDIN은 exit/ todo: valid ptr 안에 집어넣기
+      }
 
       f->eax = (uint32_t) syscall_write ((int)*arg1, *(void **)arg2, (unsigned)*arg3);
       break;
     case SYS_SEEK:
+      //printf("syscall seek\n");
       syscall_seek ((int)*arg1, (unsigned)*arg2);
       break;
     case SYS_TELL:
+      printf("syscall tell\n");
       // Not implemented
       break;
     case SYS_CLOSE:
@@ -169,21 +183,30 @@ static void
 is_valid_ptr (struct intr_frame *f UNUSED, void *uaddr)
 {
   if (is_kernel_vaddr(uaddr))
+  {
+    //printf("syscall exit4\n");
     syscall_exit(EXIT_STATUS_1);
+  }
 
   struct thread* t = thread_current ();
   uint32_t *pd = t->pagedir;
   uint32_t *is_bad_ptr = pagedir_get_page (pd, uaddr);
   
   if(is_bad_ptr == NULL)
+  {
+    //printf("syscall exit3\n");
     syscall_exit(EXIT_STATUS_1);
+  }
 }
 
 static void
 is_valid_page (struct intr_frame *f UNUSED, void *uaddr, bool write)
 {
   if (is_kernel_vaddr(uaddr))
+  {
+    //printf("syscall exit5\n");
     syscall_exit(EXIT_STATUS_1);
+  }
 
   struct thread *t = thread_current ();
   uint32_t *pd = t->pagedir;
@@ -196,7 +219,10 @@ is_valid_page (struct intr_frame *f UNUSED, void *uaddr, bool write)
     writable = p->writable;
 
     if ((write == true) && (writable == false))
+    {
+      //printf("syscall exit2\n");
       syscall_exit(EXIT_STATUS_1);
+    }
   }
   
   if(pagedir_get_page (pd, uaddr) == NULL)
@@ -206,6 +232,7 @@ is_valid_page (struct intr_frame *f UNUSED, void *uaddr, bool write)
     if (p != NULL)
     {
       //printf("Load page\n");
+      page_load (p);
     }
 
     bool stack_growth_cond = (f->esp <= uaddr + 32); // && write;
@@ -214,6 +241,7 @@ is_valid_page (struct intr_frame *f UNUSED, void *uaddr, bool write)
       if (page_stack_growth (uaddr))
         return;
     }
+    //printf("syscall exit1\n");
     syscall_exit(-1);
   }
   return;

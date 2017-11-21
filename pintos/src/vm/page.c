@@ -95,7 +95,6 @@ page_load (struct page *page)
 
   			ASSERT (install != NULL);
 
-
 			bool success = swap_in (kpage, page);
 
 			if (!success)
