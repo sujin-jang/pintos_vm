@@ -109,10 +109,6 @@ main (void)
   syscall_init ();
 #endif
 
-#ifdef VM
-  frame_init ();
-#endif
-
   /* Start thread scheduler and enable interrupts. */
   thread_start ();
   serial_init_queue ();
@@ -122,6 +118,11 @@ main (void)
   /* Initialize file system. */
   disk_init ();
   filesys_init (format_filesys);
+#endif
+
+#ifdef VM
+  frame_init();
+  swap_init();
 #endif
 
   printf ("Boot complete.\n");

@@ -163,6 +163,7 @@ page_fault (struct intr_frame *f)
 
     if (is_kernel_vaddr(fault_addr) || !not_present)
     {
+      //printf("page fault: exit1\n");
       syscall_exit(-1);
     }
 
@@ -171,7 +172,13 @@ page_fault (struct intr_frame *f)
 
     if (p != NULL)
     {
-      printf("Load page\n");
+      bool success = page_load (p);
+      if (!success)
+      {
+        //printf("page fault: exit2\n");
+        syscall_exit(-1);
+      }
+      return;
     }
 
     bool stack_growth_cond = ( f->esp == fault_addr + 4 || f->esp == fault_addr + 32 || f->esp <= fault_addr) && write;
@@ -182,6 +189,7 @@ page_fault (struct intr_frame *f)
         return;
     }
 
+    //printf("page fault: exit3\n");
     syscall_exit(-1);
 
   #endif

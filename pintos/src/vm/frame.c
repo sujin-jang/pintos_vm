@@ -10,14 +10,6 @@ struct list frame_table;
 /* Lock to protect frame table */
 struct lock frame_lock;
 
-/* Frame table entry */
-struct frame
-{
-    uint8_t *kpage;
-    struct page *page;
-    struct list_elem elem;
-};
-
 static struct frame * frame_find (void *kpage);
 
 /* Initializes the frame table (called in threads/init.c) */
@@ -51,7 +43,9 @@ frame_alloc (enum palloc_flags flags, void *upage, bool writable)
 	if (kpage == NULL)
     {	
     	/* eviction */
-    	return NULL;
+    	frame_evict ();
+    	kpage = palloc_get_page (flags); // evict 하고 온 사이에 다른애가 가로채면 어떡해 ?1! TODO: lock
+    	//return NULL;
     }
     
     struct frame *f = malloc (sizeof (*f));
@@ -64,6 +58,34 @@ frame_alloc (enum palloc_flags flags, void *upage, bool writable)
 
 	return kpage;
 }
+
+/* Frame allcoate */
+void *
+frame_alloc_with_page (enum palloc_flags flags, struct page *p)
+{
+	ASSERT(flags & PAL_USER); // if not PAL_USER, ASSERT
+
+	uint8_t *kpage = palloc_get_page (flags);
+
+	if (kpage == NULL)
+    {	
+    	/* eviction */
+    	frame_evict ();
+    	kpage = palloc_get_page (flags); // evict 하고 온 사이에 다른애가 가로채면 어떡해 ?1! TODO: lock
+    	//return NULL;
+    }
+    
+    struct frame *f = malloc (sizeof (*f));
+    f->kpage = kpage;
+    f->page = p;
+
+    lock_acquire(&frame_lock);
+  	list_push_back (&frame_table, &f->elem);
+  	lock_release(&frame_lock);
+
+	return kpage;
+}
+
 
 /* Frame free */
 void
@@ -111,9 +133,20 @@ frame_find (void *kpage)
 
 /* Choose a frame to evcit if run out of frames */
 void *
-frame_evict (void)
+frame_evict (void) // TODO: evict lock
 {
 	/* FIFO */
+
+	struct list_elem *e = list_front (&frame_table);
+	struct frame *f = list_entry (e, struct frame, elem);
+
+	swap_out (f);
+
+	f->page->status = PAGE_SWAP; // TODO: page lock
+	
+	pagedir_clear_page(f->page->thread->pagedir, f->page->upage); // TODO: pagedir lock
+	frame_free (f->kpage);
+
     return NULL;
 }
 

@@ -21,6 +21,7 @@ page_insert (void *upage, bool writable, enum page_status status)
 			p->upage = upage;
 			p->status = PAGE_FRAME;
 			p->writable = writable;
+			p->thread = thread_current();
 
 			lock_acquire (&t->page_lock);
 			hash_insert (&t->page_table, &p->elem);
@@ -40,7 +41,7 @@ page_insert (void *upage, bool writable, enum page_status status)
 			break;
 	}
 
-	printf("page insert null\n");
+	//printf("page insert null\n");
 	return NULL;
 }
 
@@ -73,21 +74,45 @@ page_find (struct hash page_table, void *upage_input)
 }
 
 bool
-page_load (void *upage)
+page_load (struct page *page)
 {
-	enum page_status status = PAGE_FRAME;
+	enum page_status status = page->status;
+	//printf("enter page load\n");
+
+	uint8_t *kpage;
 
 	switch (status)
 	{
 		case PAGE_FRAME:
 			break;
 		case PAGE_SWAP:
-			break;
+			//printf("swap load\n");
+			kpage = frame_alloc_with_page (PAL_USER, page);
+			
+			ASSERT (kpage != NULL);
+
+  			bool install = install_page (page->upage, kpage, page->writable);
+
+  			ASSERT (install != NULL);
+
+
+			bool success = swap_in (kpage, page);
+
+			if (!success)
+			{
+				//printf("page load1\n");
+				return false;
+			}
+
+			page->status = PAGE_FRAME;
+			//printf("page load: return true\n");
+			return true;
 		default:
 			break;
 	}
 
-	return true;
+	//printf("page load2\n");
+	return false;
 }
 
 bool

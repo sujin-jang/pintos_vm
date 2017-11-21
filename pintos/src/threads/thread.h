@@ -111,9 +111,7 @@ struct thread
     int fd;
     struct list fd_list;
     struct file* executable;
-#endif
 
-#ifdef VM
     struct hash page_table;
     struct lock page_lock;
 #endif

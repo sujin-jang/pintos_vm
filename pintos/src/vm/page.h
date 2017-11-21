@@ -17,7 +17,7 @@ struct page
 {
     uint8_t *upage;
     enum page_status status;
-    // struct thread *thread;
+    struct thread *thread;
 
     int swap_index;
     bool writable;
@@ -27,7 +27,7 @@ struct page
 
 struct page * page_insert (void *upage, bool writable, enum page_status status);
 void page_remove (void *upage);
-bool page_load (void *upage);
+bool page_load (struct page *page);
 
 struct page * page_find (struct hash page_table, void *upage);
 bool page_stack_growth (void *upage);
