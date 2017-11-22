@@ -238,6 +238,7 @@ is_valid_page (struct intr_frame *f UNUSED, void *uaddr, bool write)
     bool stack_growth_cond = (f->esp <= uaddr + 32); // && write;
     if (stack_growth_cond)
     {
+      
       if (page_stack_growth (uaddr))
         return;
     }

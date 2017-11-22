@@ -99,18 +99,15 @@ page_load (struct page *page)
 
 			if (!success)
 			{
-				//printf("page load1\n");
 				return false;
 			}
 
 			page->status = PAGE_FRAME;
-			//printf("page load: return true\n");
 			return true;
 		default:
 			break;
 	}
 
-	//printf("page load2\n");
 	return false;
 }
 

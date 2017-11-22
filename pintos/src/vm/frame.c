@@ -10,6 +10,8 @@ struct list frame_table;
 /* Lock to protect frame table */
 struct lock frame_lock;
 
+struct lock evict_lock;
+
 static struct frame * frame_find (void *kpage);
 
 /* Initializes the frame table (called in threads/init.c) */
@@ -18,6 +20,8 @@ frame_init (void)
 {
 	list_init (&frame_table);
   	lock_init (&frame_lock);
+
+  	lock_init (&evict_lock);
     return;
 }
 
@@ -35,6 +39,7 @@ frame_alloc (enum palloc_flags flags, void *upage, bool writable)
 	4. frame table에 push
 	*/
 
+	lock_acquire(&evict_lock);
 	struct page *p = page_insert (upage, writable, PAGE_FRAME);
 	ASSERT (p != NULL);
 
@@ -56,6 +61,7 @@ frame_alloc (enum palloc_flags flags, void *upage, bool writable)
   	list_push_back (&frame_table, &f->elem);
   	lock_release(&frame_lock);
 
+  	lock_release(&evict_lock);
 	return kpage;
 }
 

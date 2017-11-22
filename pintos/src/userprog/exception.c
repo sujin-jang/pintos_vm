@@ -159,7 +159,11 @@ page_fault (struct intr_frame *f)
 
   #ifdef VM
 
-    //printf("page fault\n");
+    /*
+    printf("page fault\n");
+    printf("%x\n", (unsigned)(f->esp));
+    printf("%x\n", (unsigned)fault_addr);
+    */
 
     if (is_kernel_vaddr(fault_addr) || !not_present)
     {
@@ -171,7 +175,7 @@ page_fault (struct intr_frame *f)
     struct page *p = page_find (t->page_table, fault_addr);
 
     if (p != NULL)
-    {
+    { 
       bool success = page_load (p);
       if (!success)
       {
@@ -181,7 +185,7 @@ page_fault (struct intr_frame *f)
       return;
     }
 
-    bool stack_growth_cond = ( f->esp == fault_addr + 4 || f->esp == fault_addr + 32 || f->esp <= fault_addr) && write;
+    bool stack_growth_cond = ( f->esp == fault_addr + 4 || f->esp == fault_addr + 32 || f->esp <= fault_addr + 32) && write;
 
     if (stack_growth_cond)
     {
